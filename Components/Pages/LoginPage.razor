@@ -1,0 +1,90 @@
+﻿@page "/Login"
+
+@using CompanyKnowledgeAIClient.Forms
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Identity
+
+@inject ISnackbar Snackbar
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager Navigation
+@inject UserManager<IdentityUser> UserManager
+@inject SignInManager<IdentityUser> SignInManager
+
+<EditForm Model="@_loginForm" OnValidSubmit="OnValidSubmit">
+    <DataAnnotationsValidator />
+    <MudContainer MaxWidth="MaxWidth.Small" Style="height: 100vh; display: flex; align-items: center;">
+        <MudCard Elevation="6" Class="rounded-t-lg" Style="width: 100%;">
+            <MudCardHeader Class="pa-2" Style="background-color: var(--mud-palette-primary); color: var(--mud-palette-primary-text);">
+                <CardHeaderContent>
+                    <MudText>Login</MudText>
+                </CardHeaderContent>
+            </MudCardHeader>
+            <MudCardContent>
+                <MudCardContent>
+                    <MudTextField AutoFocus Label="Username" HelperText="Max. 8 characters"
+                                  @bind-Value="_loginForm.Username" For="@(() => _loginForm.Username)" InputType="InputType.Text" />
+                    <MudTextField Label="Password" HelperText="Choose a strong password" Class="mt-3"
+                                  @bind-Value="_loginForm.Password" For="@(() => _loginForm.Password)" InputType="InputType.Password" />
+                </MudCardContent>
+                <MudCardActions>
+                    <MudButton OnClick="CreateUser" Variant="Variant.Filled" Color="Color.Primary" Class="mx-auto">Create User</MudButton>
+                    <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Class="mx-auto">Login</MudButton>
+                </MudCardActions>
+            </MudCardContent>
+        </MudCard>
+    </MudContainer>
+</EditForm>
+
+@code {
+    private LoginForm _loginForm = new();
+
+    // ########### Create a test user - FOR DEBUG ONLY ##################################
+    private async Task CreateUser()
+    {
+        var user = new IdentityUser
+            {
+
+                UserName = _loginForm.Username
+            };
+
+        var result = await UserManager.CreateAsync(user, _loginForm.Password);
+
+        Snackbar.Add(result.ToString(), Severity.Info);
+    }
+    // ##################################################################################
+
+
+    private async Task OnValidSubmit(EditContext context)
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var userClaimsPrincipal = authState.User;
+
+        if (userClaimsPrincipal.Identity is { IsAuthenticated: false })
+        {
+            var user = await UserManager.FindByNameAsync(_loginForm.Username);
+
+            if (user == null)
+            {
+                Snackbar.Add("The username does not exist", Severity.Info);
+            }
+            else
+            {
+                var signInResult = await SignInManager.PasswordSignInAsync(user, _loginForm.Password, false, false);
+
+                if (signInResult.Succeeded)
+                {
+                    Navigation.NavigateTo("/");
+                }
+                else
+                {
+                    Snackbar.Add(signInResult.ToString(), Severity.Info);
+                }
+            }
+        }
+        else
+        {
+            Navigation.NavigateTo("/");
+        }
+        StateHasChanged();
+    }
+}

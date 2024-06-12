@@ -1,0 +1,20 @@
+services:  
+  mysql:
+    image: mysql:8.0.36
+    restart: unless-stopped
+    container_name: mysqldatabase
+    volumes:
+      - './conf/mysql:/etc/mysql/config.d'
+      - './scripts:/docker-entrypoint-initdb.d'
+    # Require caused by windows permission problems
+    command: >
+      bash -c "
+      cp /etc/mysql/config.d/* /etc/mysql/conf.d/.
+      && chmod 644 /etc/mysql/conf.d/*.cnf
+      && /entrypoint.sh mysqld
+      "
+    ports:
+      - '0.0.0.0:3306:3306/tcp'
+    environment:
+      - 'MYSQL_ROOT_PASSWORD=mysqlpassword'
+      - 'MYSQL_DATABASE=test' 
